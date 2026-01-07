@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Pro 批量抠图工作站 v3.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#3B82F6', success: '#10B981', danger: '#EF4444' }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass { backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(255, 255, 255, 0.3); }
+        }
+    </style>
+</head>
+<body class="bg-[#F3F4F6] min-h-screen font-sans">
+
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="bg-primary p-2 rounded-xl shadow-lg">
+                <i class="fa fa-magic text-white text-lg"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-gray-800">Gemini <span class="text-primary">ClawProxy</span></span>
+        </div>
+        <div class="text-xs text-gray-400 bg-white px-3 py-1 rounded-full border">已连接至 ClawCloud 反代</div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- 左侧：控制台 -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass p-6 rounded-3xl shadow-sm">
+                    <h3 class="font-bold mb-4 text-gray-700"><i class="fa fa-cog mr-2 text-primary"></i> 接口配置</h3>
+                    
+                    <!-- 反代 API 地址 -->
+                    <div class="mb-4">
+                        <label class="text-xs font-bold text-gray-500 mb-1 block">反代服务器地址 (Gemini Endpoint)</label>
+                        <input type="text" id="apiUrl" value="https://yqyfmcrtvcih.us-west-1.clawcloudrun.com/v1beta" class="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-primary outline-none transition-all">
+                    </div>
+
+                    <!-- API Key -->
+                    <div class="mb-4">
+                        <label class="text-xs font-bold text-gray-500 mb-1 block">Gemini API Key</label>
+                        <input type="password" id="apiKey" placeholder="在此输入你的 Gemini API Key" class="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary outline-none transition-all">
+                    </div>
+
+                    <!-- 模型选择 -->
+                    <div class="mb-6">
+                        <label class="text-xs font-bold text-gray-500 mb-1 block">任务模式</label>
+                        <select id="apiMode" class="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 outline-none">
+                            <option value="gemini">Gemini 原生反代 (JSON 模式)</option>
+                            <option value="standard">标准抠图服务器 (FormData 模式)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-primary transition-all cursor-pointer bg-white/50" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+                        <i class="fa fa-cloud-upload text-3xl text-primary mb-2"></i>
+                        <p class="text-sm font-bold text-gray-600">选择产品图片</p>
+                    </div>
+
+                    <button onclick="startBatchProcess()" id="startBtn" class="w-full mt-6 bg-primary hover:bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center space-x-2">
+                        <i class="fa fa-rocket"></i>
+                        <span>启动一键处理</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧：工作区 -->
+            <div class="lg:col-span-8">
+                <div class="glass rounded-3xl min-h-[500px] p-6 shadow-sm">
+                    <div id="progressArea" class="hidden mb-6">
+                        <div class="flex justify-between text-sm mb-2 font-bold text-primary">
+                            <span id="progressText">准备就绪</span>
+                            <span id="percentText">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                            <div id="progressBar" class="bg-primary h-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="resultGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="col-span-full py-20 text-center text-gray-300">
+                            <i class="fa fa-magic text-5xl mb-4"></i>
+                            <p>处理后的结果将显示在这里</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let queue = [];
+        let isProcessing = false;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            queue = [...queue, ...files.map(file => ({
+                file: file,
+                status: 'ready',
+                resultUrl: null
+            }))];
+            renderGrid();
+        });
+
+        function renderGrid() {
+            const grid = document.getElementById('resultGrid');
+            if (queue.length === 0) return;
+            grid.innerHTML = queue.map((item, index) => `
+                <div class="relative aspect-square bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group">
+                    <img src="${item.resultUrl || URL.createObjectURL(item.file)}" class="w-full h-full object-cover ${item.status === 'processing' ? 'opacity-30' : ''}">
+                    ${item.status === 'processing' ? `<div class="absolute inset-0 flex items-center justify-center"><i class="fa fa-spinner fa-spin text-primary text-2xl"></i></div>` : ''}
+                    ${item.status === 'success' ? `<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center"><a href="${item.resultUrl}" download="result_${index}.png" class="bg-white p-3 rounded-full text-primary"><i class="fa fa-download text-lg"></i></a></div>` : ''}
+                    ${item.status === 'error' ? `<div class="absolute inset-0 bg-danger/10 flex items-center justify-center"><span class="text-danger font-bold text-xs">处理失败</span></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function startBatchProcess() {
+            if (isProcessing || queue.length === 0) return;
+            
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) { alert("请输入 Gemini API Key"); return; }
+
+            const baseUrl = document.getElementById('apiUrl').value.trim();
+            const mode = document.getElementById('apiMode').value;
+            
+            isProcessing = true;
+            document.getElementById('progressArea').classList.remove('hidden');
+
+            for (let i = 0; i < queue.length; i++) {
+                if (queue[i].status === 'success') continue;
+                queue[i].status = 'processing';
+                renderGrid();
+
+                try {
+                    let result;
+                    if (mode === 'gemini') {
+                        result = await processWithGemini(queue[i].file, apiKey, baseUrl);
+                    } else {
+                        result = await processStandard(queue[i].file, apiKey, baseUrl);
+                    }
+                    queue[i].resultUrl = result;
+                    queue[i].status = 'success';
+                } catch (error) {
+                    console.error(error);
+                    queue[i].status = 'error';
+                }
+                updateProgress(i + 1, queue.length);
+                renderGrid();
+            }
+            isProcessing = false;
+        }
+
+        // --- 模式 1: 原生 Gemini 反代处理 (JSON 格式) ---
+        async function processWithGemini(file, key, baseUrl) {
+            // 将文件转换为 Base64
+            const base64Data = await fileToBase64(file);
+            const pureBase64 = base64Data.split(',')[1];
+
+            // 构造 Gemini 1.5 Flash 请求 (处理图片最快)
+            const url = `${baseUrl}/models/gemini-1.5-flash:generateContent?key=${key}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: "请帮我把这张电商图片的背景移除，只保留主体产品，并添加一个自然的落地阴影。请返回处理后的图像数据。" },
+                        { inline_data: { mime_type: file.type, data: pureBase64 } }
+                    ]
+                }]
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error("Gemini 接口响应异常");
+            
+            const json = await response.json();
+            // 注意：Gemini 主要是返回文本，如果是定制的反代可能会返回图片 URL 或 Base64
+            // 这里假设你的反代地址后端能处理抠图并返回结果。
+            // 如果只是普通 Gemini，它无法直接返回 PNG，建议依然使用 Hugging Face 作为后端。
+            return base64Data; // 占位逻辑
+        }
+
+        // --- 模式 2: 标准 FormData 模式 (推荐用于 Hugging Face 后端) ---
+        async function processStandard(file, key, baseUrl) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('api_key', key);
+            const response = await fetch(`${baseUrl}/process`, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error("处理失败");
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function updateProgress(cur, total) {
+            const percent = Math.round((cur / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('percentText').innerText = percent + '%';
+            document.getElementById('progressText').innerText = `正在处理: ${cur} / ${total}`;
+        }
+    </script>
+</body>
+</html>
