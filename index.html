@@ -314,12 +314,12 @@
         async function startBatchProcess() {
             if (isProcessing || queue.length === 0) return;
             
-            // 智能读取逻辑：如果框里是空的，则使用代码内默认的解密地址
+            // 获取输入值，如果为空则取默认解密值
             const rawApiKey = document.getElementById('apiKey').value.trim();
             const rawProxy = document.getElementById('geminiProxy').value.trim();
             const rawBackend = document.getElementById('hfBackend').value.trim();
 
-            const apiKey = rawApiKey; // 默认就是空
+            const apiKey = rawApiKey; 
             const geminiUrl = rawProxy !== "" ? rawProxy : atob(_O_P);
             const hfUrl = rawBackend !== "" ? rawBackend : atob(_O_B);
             const selectedModel = document.getElementById('modelSelect').value;
@@ -333,12 +333,12 @@
                 if (queue[i].status === 'success') continue;
 
                 queue[i].status = 'processing';
-                queue[i].log = 'Gemini 分析中';
+                queue[i].log = '大脑分析中...';
                 renderGrid();
                 updateProgress(i, queue.length);
 
                 try {
-                    // 1. 大脑分析 (Gemini)
+                    // --- 阶段 1: Gemini 大脑分析 ---
                     const base64 = await toBase64(queue[i].file);
                     const cleanProxy = geminiUrl.replace(/\/$/, "");
                     const geminiRes = await fetch(`${cleanProxy}/models/${selectedModel}:generateContent?key=${apiKey}`, {
@@ -347,20 +347,31 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [
-                                    { text: "分析此图。为了抠图加阴影，请返回阴影参数：offset_x, offset_y, blur(5-15), opacity(0.3-0.6)。只返回 JSON: {\"offset_x\": 10, \"offset_y\": 10, \"blur\": 10, \"opacity\": 0.4}" },
+                                    { text: "分析此图。为了抠图加阴影，请返回阴影参数：offset_x, offset_y, blur, opacity。请只返回纯 JSON，严禁包含Markdown标签，示例: {\"offset_x\": 10, \"offset_y\": 10, \"blur\": 8, \"opacity\": 0.4}" },
                                     { inline_data: { mime_type: queue[i].file.type, data: base64.split(',')[1] } }
                                 ]
                             }]
                         })
                     });
 
-                    if (!geminiRes.ok) throw new Error("GEMINI_ERROR");
+                    if (!geminiRes.ok) throw new Error(`Gemini 联络失败(状态码:${geminiRes.status})`);
+                    
                     const geminiData = await geminiRes.json();
-                    const rawText = geminiData.candidates[0].content.parts[0].text;
-                    const shadowParams = rawText.match(/\{.*\}/s)[0]; 
+                    
+                    // 检查 Gemini 是否正常返回内容
+                    if (!geminiData.candidates || geminiData.candidates.length === 0) {
+                        throw new Error("Gemini 拒绝分析或 Key 已过期");
+                    }
+                    
+                    let rawText = geminiData.candidates[0].content.parts[0].text;
+                    
+                    // 增强型 JSON 提取：兼容更多复杂的返回格式
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) throw new Error("Gemini 返回格式非 JSON");
+                    const shadowParams = jsonMatch[0]; 
 
-                    // 2. 双手执行 (Hugging Face)
-                    queue[i].log = '后端处理中';
+                    // --- 阶段 2: Hugging Face 后端执行 ---
+                    queue[i].log = '算法执行中...';
                     renderGrid();
 
                     const fd = new FormData();
@@ -368,26 +379,31 @@
                     fd.append('shadow_params', shadowParams);
 
                     const cleanHf = hfUrl.replace(/\/$/, "");
+                    // 注意：这里确保指向 process_smart 接口
                     const hfRes = await fetch(`${cleanHf}/process_smart`, { method: 'POST', body: fd });
-                    if (!hfRes.ok) throw new Error("HF_ERROR");
+                    
+                    if (!hfRes.ok) {
+                        if (hfRes.status === 404) throw new Error("后端接口路径错误(404)");
+                        throw new Error(`后端故障(状态码:${hfRes.status})`);
+                    }
                     
                     const blob = await hfRes.blob();
                     queue[i].resultUrl = URL.createObjectURL(blob);
                     queue[i].status = 'success';
 
                 } catch (error) {
-                    console.error(error);
+                    console.error("详细错误:", error);
                     queue[i].status = 'error';
-                    queue[i].log = error.message; // 把具体的错误信息显示在图片上
+                    // 将具体错误原因写在 log 中显示在界面
+                    queue[i].log = error.message; 
                 }
 
                 renderGrid();
                 updateProgress(i + 1, queue.length);
             }
             isProcessing = false;
-            document.getElementById('progressText').innerText = "任务处理完毕！";         
+            document.getElementById('progressText').innerText = "全部任务已完成";         
         }
-
         // 工具函数
         function toBase64(file) {
             return new Promise((resolve) => {
