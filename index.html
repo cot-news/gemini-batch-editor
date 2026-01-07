@@ -338,6 +338,7 @@
                 } catch (error) {
                     console.error(error);
                     queue[i].status = 'error';
+                    alert("这张图失败了，原因是: " + error.message);
                 }
 
                 renderGrid();
