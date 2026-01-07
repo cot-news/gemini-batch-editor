@@ -1,169 +1,46 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini 批量处理中心 - 调试版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script>
-        tailwind.config = { theme: { extend: { colors: { primary: '#3B82F6', success: '#10B981', danger: '#EF4444' } } } }
-    </script>
-</head>
-<body class="bg-gray-100 min-h-screen p-4 md:p-10">
+async function startBatchProcess() {
+    const geminiUrl = "https://yqyfmcrtvcih.us-west-1.clawcloudrun.com/v1beta"; // 你的反代地址
+    const hfUrl = "https://你的名字-my-ai-remover.hf.space/process_smart"; // 你的 HF 地址
+    const apiKey = document.getElementById('apiKey').value;
 
-    <div class="max-w-4xl mx-auto space-y-6">
-        <!-- 头部 -->
-        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">AI 图像处理器</h1>
-                <p class="text-sm text-gray-400">支持反代与自定义后端</p>
-            </div>
-            <div id="connStatus" class="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-500">检测中...</div>
-        </div>
+    for (let item of queue) {
+        item.status = 'processing';
+        renderGrid();
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- 配置面板 -->
-            <div class="bg-white p-6 rounded-3xl shadow-sm space-y-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-400 block mb-1">API 地址</label>
-                    <input type="text" id="apiUrl" value="https://naidd-my-ai-remover.hf.space/process" class="w-full px-3 py-2 text-sm border rounded-xl outline-none focus:ring-2 focus:ring-primary">
-                    <p class="text-[10px] text-blue-500 mt-1 cursor-pointer" onclick="useGeminiProxy()">使用 Gemini 反代地址</p>
-                </div>
-
-                <div>
-                    <label class="text-xs font-bold text-gray-400 block mb-1">API Key (Gemini模式必需)</label>
-                    <input type="password" id="apiKey" placeholder="输入 Key" class="w-full px-3 py-2 text-sm border rounded-xl outline-none">
-                </div>
-
-                <div class="pt-4">
-                    <input type="file" id="fileInput" multiple class="hidden" accept="image/*">
-                    <button onclick="document.getElementById('fileInput').click()" class="w-full py-3 border-2 border-dashed border-primary text-primary rounded-xl font-bold hover:bg-blue-50 transition-all">
-                        <i class="fa fa-plus mr-2"></i>选择图片
-                    </button>
-                    <button onclick="startBatch()" id="startBtn" class="w-full mt-4 bg-primary text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-600 disabled:bg-gray-300">
-                        开始处理
-                    </button>
-                </div>
-            </div>
-
-            <!-- 结果面板 -->
-            <div class="md:col-span-2 bg-white p-6 rounded-3xl shadow-sm min-h-[400px]">
-                <div id="progressInfo" class="hidden mb-4 p-3 bg-blue-50 rounded-xl text-xs text-blue-600 font-bold"></div>
-                <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div class="col-span-full text-center py-20 text-gray-300">
-                        <i class="fa fa-cloud-upload text-4xl mb-2"></i>
-                        <p>请上传图片</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const API_GEMINI_PROXY = "https://yqyfmcrtvcih.us-west-1.clawcloudrun.com/v1beta";
-        const API_HF_DEFAULT = "https://naidd-my-ai-remover.hf.space/process";
-
-        function useGeminiProxy() {
-            document.getElementById('apiUrl').value = API_GEMINI_PROXY;
-            alert("已切换至 Gemini 反代地址。注意：原生 Gemini 仅支持分析，不支持直接导出透明抠图。");
-        }
-
-        let queue = [];
-
-        document.getElementById('fileInput').onchange = (e) => {
-            const files = Array.from(e.target.files);
-            queue = files.map(f => ({ file: f, status: 'ready', url: null, error: null }));
-            render();
-        };
-
-        function render() {
-            const grid = document.getElementById('grid');
-            if (queue.length === 0) return;
-            grid.innerHTML = queue.map((item, i) => `
-                <div class="relative aspect-square rounded-2xl border overflow-hidden bg-gray-50">
-                    <img src="${item.url || URL.createObjectURL(item.file)}" class="w-full h-full object-cover ${item.status==='busy'?'opacity-40':''}">
-                    ${item.status === 'busy' ? '<div class="absolute inset-0 flex items-center justify-center"><i class="fa fa-spinner fa-spin text-primary"></i></div>' : ''}
-                    ${item.status === 'fail' ? `<div class="absolute inset-0 bg-red-500/80 p-2 text-[10px] text-white flex items-center justify-center text-center leading-tight">${item.error}</div>` : ''}
-                    ${item.status === 'done' ? `<a href="${item.url}" download class="absolute bottom-2 right-2 bg-green-500 text-white p-2 rounded-full shadow-lg"><i class="fa fa-download"></i></a>` : ''}
-                </div>
-            `).join('');
-        }
-
-        async function startBatch() {
-            const endpoint = document.getElementById('apiUrl').value.trim();
-            const key = document.getElementById('apiKey').value.trim();
-            const btn = document.getElementById('startBtn');
-            const info = document.getElementById('progressInfo');
-
-            if (queue.length === 0) return alert("请先选图");
-            
-            btn.disabled = true;
-            info.classList.remove('hidden');
-
-            for (let i = 0; i < queue.length; i++) {
-                queue[i].status = 'busy';
-                info.innerText = `正在处理第 ${i+1}/${queue.length} 张...`;
-                render();
-
-                try {
-                    // 判断是 Gemini 还是普通抠图后端
-                    if (endpoint.includes('v1beta')) {
-                        // 如果是反代 Gemini 接口
-                        queue[i].url = await callGemini(queue[i].file, endpoint, key);
-                    } else {
-                        // 如果是标准的抠图服务器
-                        queue[i].url = await callCutter(queue[i].file, endpoint);
-                    }
-                    queue[i].status = 'done';
-                } catch (e) {
-                    queue[i].status = 'fail';
-                    queue[i].error = e.message;
-                }
-                render();
-            }
-
-            btn.disabled = false;
-            info.innerText = "全部处理完成";
-        }
-
-        // 抠图后端调用
-        async function callCutter(file, url) {
-            const fd = new FormData();
-            fd.append('file', file);
-            const res = await fetch(url, { method: 'POST', body: fd });
-            if (!res.ok) {
-                if (res.status === 404) throw new Error("地址错误 (404)");
-                throw new Error(`服务器报错 (${res.status})`);
-            }
-            const blob = await res.blob();
-            return URL.createObjectURL(blob);
-        }
-
-        // Gemini 原生调用 (仅做测试连通)
-        async function callGemini(file, url, key) {
-            if (!key) throw new Error("缺少 API Key");
-            // 注意：Gemini 原生不返回抠图结果，这里仅展示如何通过反代成功发送请求
-            const res = await fetch(`${url}/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        try {
+            // --- 阶段 1: 问大脑 (Gemini) ---
+            const base64 = await toBase64(item.file);
+            const geminiRes = await fetch(`${geminiUrl}/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: "Describe this image" }, { inline_data: { mime_type: file.type, data: await toBase64(file) } }] }]
+                    contents: [{
+                        parts: [
+                            { text: "你是一个专业的摄影后期。请分析这张产品图，为了让它抠图后更有立体感，请给出建议的阴影参数：offset_x (水平偏移), offset_y (垂直偏移), blur (模糊度 5-20), opacity (透明度 0-1)。请只返回 JSON 格式，例如: {\"offset_x\": 10, \"offset_y\": 15, \"blur\": 10, \"opacity\": 0.5}" },
+                            { inline_data: { mime_type: item.file.type, data: base64.split(',')[1] } }
+                        ]
+                    }]
                 })
             });
-            if (!res.ok) throw new Error(`反代拒绝访问 (${res.status})`);
-            const json = await res.json();
-            // 原生接口返回的是 JSON 文本，这里无法变成一张透明图
-            throw new Error("Gemini 原生接口不返回透明抠图，请改用 Hugging Face 地址。");
-        }
+            const geminiData = await geminiRes.json();
+            // 提取 JSON 字符串（处理 Gemini 可能返回的 Markdown 代码块）
+            const rawText = geminiData.candidates[0].content.parts[0].text;
+            const shadowParams = rawText.match(/\{.*\}/s)[0]; 
 
-        function toBase64(file) {
-            return new Promise((resolve) => {
-                const r = new FileReader();
-                r.readAsDataURL(file);
-                r.onload = () => resolve(r.result.split(',')[1]);
-            });
+            // --- 阶段 2: 传给双手 (Hugging Face) ---
+            const fd = new FormData();
+            fd.append('file', item.file);
+            fd.append('shadow_params', shadowParams); // 把大脑的指令传过去
+
+            const hfRes = await fetch(hfUrl, { method: 'POST', body: fd });
+            const blob = await hfRes.blob();
+            item.resultUrl = URL.createObjectURL(blob);
+            item.status = 'success';
+
+        } catch (e) {
+            console.error(e);
+            item.status = 'error';
         }
-    </script>
-</body>
-</html>
+        renderGrid();
+    }
+}
