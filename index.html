@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gemini Pro 智能批量抠图工作站</title>
-    <!-- 引入样式与脚本库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -29,107 +28,60 @@
 </head>
 <body class="bg-gray-50 font-sans text-gray-900 overflow-x-hidden">
 
-    <!-- 1. 导航栏 -->
-    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-primary rounded-xl p-2 shadow-lg shadow-blue-200 text-white">
-                        <i class="fa fa-magic text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-lg font-bold">Gemini <span class="text-primary">Batch</span></h1>
-                        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Smart Image Editor</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="#workflow" class="text-sm text-gray-500 hover:text-primary transition-colors">技术架构</a>
-                    <button onclick="document.getElementById('editor').scrollIntoView({behavior:'smooth'})" class="bg-primary text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:opacity-90 transition-all">
-                        开始使用
-                    </button>
-                </div>
+    <!-- 导航栏 -->
+    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 px-8 py-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="bg-primary rounded-xl p-2 shadow-lg text-white">
+                <i class="fa fa-magic text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold">Gemini <span class="text-primary font-black uppercase tracking-tighter">Batch</span></h1>
             </div>
         </div>
+        <button onclick="toggleAllMasks()" class="text-[10px] font-bold text-primary bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-all border border-blue-100">
+            <i class="fa fa-eye-slash mr-1"></i> 显示/隐藏敏感地址
+        </button>
     </nav>
 
-    <!-- 2. Hero 英雄区域 -->
-    <section class="relative py-20 overflow-hidden">
-        <div class="absolute inset-0 gradient-bg opacity-5"></div>
-        <div class="max-w-7xl mx-auto px-4 text-center relative z-10 animate-fade-in">
-            <h2 class="text-5xl md:text-7xl font-black text-dark mb-6 tracking-tight">
-                让 AI 成为你的 <span class="text-primary italic">后期专家</span>
-            </h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-                结合 Gemini Pro 的图像分析大脑与高性能抠图引擎，<br>为您的电商产品图片实现一键批量背景移除与智能阴影。
-            </p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <div class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100 text-sm text-gray-500">
-                    <i class="fa fa-check-circle text-success"></i> <span>基于 Gemini 1.5 Flash</span>
-                </div>
-                <div class="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100 text-sm text-gray-500">
-                    <i class="fa fa-check-circle text-success"></i> <span>ClawCloud 反代支持</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 3. 核心编辑器区域 (智能工作台) -->
-    <section id="editor" class="max-w-7xl mx-auto px-4 py-12 scroll-mt-20">
+    <main id="editor" class="max-w-7xl mx-auto px-4 py-12">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <!-- 控制台 (左侧) -->
+            <!-- 控制台 -->
             <div class="lg:col-span-4 space-y-6">
-                <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-gray-200/50 border border-gray-100">
-                    <h3 class="text-xl font-bold mb-6 flex items-center">
-                        <i class="fa fa-cog mr-3 text-primary"></i> 任务配置
+                <div class="bg-white rounded-[2rem] p-8 shadow-xl border border-gray-100">
+                    <h3 class="text-lg font-bold mb-6 flex items-center text-dark italic">
+                        <i class="fa fa-cog mr-3 text-primary animate-spin-slow"></i> TASK_CONFIG
                     </h3>
                     
-                    <div class="space-y-5">
-                        <!-- 模型选择 -->
+                    <div class="space-y-4">
                         <div>
-                            <label class="text-[11px] font-black text-gray-400 uppercase mb-2 block tracking-wider">选择 AI 模型</label>
-                            <select id="modelSelect" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-primary outline-none transition-all text-sm font-medium cursor-pointer">
-                                <optgroup label="✨ Gemini 3 (最新预览)">
-                                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (极速)</option>
-                                    <option value="gemini-3-pro-preview">Gemini 3 Pro Preview (全能)</option>
-                                </optgroup>
-                                <optgroup label="🚀 Gemini 2.5 (高性能稳定)">
-                                    <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (最平衡)</option>
-                                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (专业分析)</option>
-                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (极速轻量)</option>
-                                </optgroup>
-                                <optgroup label="🧪 实验性/其他">
-                                    <option value="gemini-exp-1206">Gemini Experimental 1206</option>
-                                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                                    <option value="gemini-2.5-computer-use-preview-10-2025">Computer Use Preview</option>
-                                </optgroup>
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">推理模型</label>
+                            <select id="modelSelect" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs font-bold cursor-pointer transition-all">
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (最推荐)</option>
+                                <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash Exp</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                             </select>
                         </div>
-                        <!-- 反代地址 (混淆+脱敏) -->
+                        
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Gemini 反代地址</label>
-                            <input type="password" id="geminiProxy" placeholder="●●●●●● 使用默认预设" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs transition-all">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Gemini 反代地址</label>
+                            <input type="password" id="geminiProxy" placeholder="使用默认混淆预设" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs transition-all">
                         </div>
 
-                        <!-- 后端地址 (混淆+脱敏) -->
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Hugging Face 后端</label>
-                            <input type="password" id="hfBackend" placeholder="●●●●●● 使用默认预设" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs transition-all">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Hugging Face 后端</label>
+                            <input type="password" id="hfBackend" placeholder="使用默认混淆预设" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs transition-all">
                         </div>
 
-                        <!-- API Key (留空) -->
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-widest">Gemini API Key</label>
-                            <input type="password" id="apiKey" placeholder="在此输入您的 API Key" class="w-full px-4 py-3 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs transition-all shadow-inner">
+                            <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 block">Gemini API Key</label>
+                            <input type="password" id="apiKey" placeholder="在此输入您的 API Key" class="w-full px-4 py-3 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-primary text-xs shadow-inner">
                         </div>
 
-                        <div id="dropZone" class="border-2 border-dashed border-blue-100 rounded-3xl p-8 text-center bg-blue-50/30 hover:bg-blue-50 hover:border-primary transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
+                        <div id="dropZone" class="border-2 border-dashed border-blue-100 rounded-[2rem] p-8 text-center bg-blue-50/30 hover:bg-blue-50 transition-all cursor-pointer group" onclick="document.getElementById('fileInput').click()">
                             <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
-                            <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-all">
-                                <i class="fa fa-plus text-primary text-xl"></i>
-                            </div>
-                            <p class="text-sm font-bold text-gray-700">添加图片</p>
-                            <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">支持多选处理</p>
+                            <i class="fa fa-plus text-primary text-xl mb-2 group-hover:scale-110 transition-transform"></i>
+                            <p class="text-xs font-bold text-gray-600">添加批量图片</p>
                         </div>
 
                         <button onclick="startBatchProcess()" id="startBtn" class="w-full mt-6 bg-primary hover:bg-blue-600 text-white py-5 rounded-[1.5rem] font-bold shadow-xl shadow-blue-200 transition-all flex items-center justify-center space-x-3">
@@ -138,127 +90,43 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- 技术优势展示 -->
-                <div class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200">
-                    <h4 class="font-bold flex items-center mb-3">
-                        <i class="fa fa-lightbulb-o mr-2"></i> 技术优势
-                    </h4>
-                    <p class="text-xs text-blue-100 leading-relaxed opacity-90">
-                        采用最新的 Gemini 1.5 Flash 视觉模型，自动分析光源方向与阴影半径，并由后端专用抠图算法执行高精度分割。
-                    </p>
-                </div>
             </div>
 
-            <!-- 结果区 (右侧) -->
+            <!-- 结果区 -->
             <div class="lg:col-span-8">
-                <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-gray-200/50 border border-gray-100 min-h-[600px] relative">
-                    <!-- 进度显示 -->
-                    <div id="progressArea" class="hidden mb-10 animate-fade-in">
+                <div class="bg-white rounded-[2rem] p-8 shadow-xl border border-gray-100 min-h-[600px] relative">
+                    <div id="progressArea" class="hidden mb-10">
                         <div class="flex justify-between items-end mb-3">
                             <div>
-                                <h4 id="progressText" class="text-primary font-black text-lg">AI 正在思考...</h4>
-                                <p class="text-[10px] text-gray-400 uppercase tracking-widest">Processing Queue</p>
+                                <h4 id="progressText" class="text-primary font-black text-lg italic uppercase">AI PROCESSING...</h4>
+                                <p class="text-[10px] text-gray-300 uppercase tracking-widest font-bold">Queue Monitor</p>
                             </div>
-                            <span id="percentText" class="text-3xl font-black text-gray-200">0%</span>
+                            <span id="percentText" class="text-3xl font-black text-gray-100">0%</span>
                         </div>
-                        <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                        <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                             <div id="progressBar" class="bg-primary h-full transition-all duration-700 ease-out" style="width: 0%"></div>
                         </div>
                     </div>
 
-                    <!-- 动态网格 -->
                     <div id="resultGrid" class="grid grid-cols-2 md:grid-cols-3 gap-6">
-                        <div class="col-span-full py-40 text-center">
-                            <i class="fa fa-images text-7xl text-gray-100 mb-6"></i>
-                            <p class="text-gray-300 font-medium">还没有待处理的任务</p>
+                        <div class="col-span-full py-40 text-center opacity-10">
+                            <i class="fa fa-braille text-8xl mb-6"></i>
+                            <p class="font-black italic uppercase">Results Dashboard</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </main>
 
-    <!-- 4. 痛点分析区域 (参考网页风格) -->
-    <section class="bg-white py-24">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="text-center mb-16">
-                <h3 class="text-3xl font-black text-dark mb-4">为什么选择我们？</h3>
-                <p class="text-gray-500">解决传统电商抠图的繁琐与僵硬</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-red-50 p-8 rounded-[2rem] border border-red-100 card-hover">
-                    <div class="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6"><i class="fa fa-clock-o text-xl"></i></div>
-                    <h4 class="text-xl font-bold mb-3">告别手动 PS</h4>
-                    <p class="text-sm text-gray-600 leading-relaxed">传统人工抠图每张需花费 3-5 分钟，本工具仅需 5-10 秒即可完成批量化任务。</p>
-                </div>
-                <div class="bg-orange-50 p-8 rounded-[2rem] border border-orange-100 card-hover">
-                    <div class="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-6"><i class="fa fa-cubes text-xl"></i></div>
-                    <h4 class="text-xl font-bold mb-3">智能阴影模拟</h4>
-                    <p class="text-sm text-gray-600 leading-relaxed">不仅仅是去背景。Gemini 智能分析产品形态，模拟真实自然的光影落地效果。</p>
-                </div>
-                <div class="bg-purple-50 p-8 rounded-[2rem] border border-purple-100 card-hover">
-                    <div class="w-12 h-12 bg-purple-100 text-purple-500 rounded-full flex items-center justify-center mb-6"><i class="fa fa-money text-xl"></i></div>
-                    <h4 class="text-xl font-bold mb-3">零成本部署</h4>
-                    <p class="text-sm text-gray-600 leading-relaxed">利用 Hugging Face 免费算力与 Gemini 免费 API，实现真正的零成本商业级工具。</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 5. 性能展示图表 -->
-    <section class="bg-gray-50 py-24">
-        <div class="max-w-5xl mx-auto px-4">
-            <div class="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-                <h3 class="text-2xl font-black text-center mb-10">处理效率对比</h3>
-                <div class="h-80">
-                    <canvas id="performanceChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 6. 页脚 -->
-    <footer class="bg-dark text-gray-400 py-16">
-        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12">
-            <div class="col-span-2">
-                <div class="flex items-center space-x-3 mb-6">
-                    <div class="bg-primary rounded-xl p-2 text-white">
-                        <i class="fa fa-magic"></i>
-                    </div>
-                    <span class="text-white font-bold text-xl">Gemini Batch Editor</span>
-                </div>
-                <p class="text-sm leading-relaxed max-w-sm">基于 Google Gemini Pro 的专业批量图像处理解决方案。为电商企业提供最高效的 AI 视觉处理能力。</p>
-            </div>
-            <div>
-                <h5 class="text-white font-bold mb-4">链接</h5>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="#" class="hover:text-white transition-colors">GitHub 源码</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors">API 文档</a></li>
-                </ul>
-            </div>
-            <div>
-                <h5 class="text-white font-bold mb-4">联系</h5>
-                <p class="text-sm italic">AI Powered Backend on Hugging Face</p>
-            </div>
-        </div>
-        <div class="max-w-7xl mx-auto px-4 border-t border-gray-800 mt-12 pt-8 text-center text-xs tracking-widest">
-            &copy; 2026 GEMINI BATCH EDITOR. ALL RIGHTS RESERVED.
-        </div>
-    </footer>
-
-    <!-- 核心逻辑脚本 -->
     <script>
-          // --- 核心隐私加密区 (Base64 混淆) ---
-        // 反代地址混淆
+        // --- 加密逻辑 ---
         const _O_P = "aHR0cHM6Ly95cXlmbWNydHZjaWgubXUtd2VzdC0xLmNsYXdjbG91ZHJ1bi5jb20vdjFiZXRh"; 
-        // 后端地址混淆
         const _O_B = "aHR0cHM6Ly9uYWlkZC1teS1haS1yZW1vdmVyLmhmLnNwYWNl";
 
         let queue = [];
         let isProcessing = false;
 
-        // 显示/隐藏敏感项逻辑
         function toggleAllMasks() {
             const fields = ['geminiProxy', 'hfBackend', 'apiKey'];
             fields.forEach(id => {
@@ -273,7 +141,7 @@
                 file: file,
                 status: 'ready',
                 resultUrl: null,
-                log: '等待'
+                log: '等待启动'
             }))];
             renderGrid();
         });
@@ -282,29 +150,31 @@
             const grid = document.getElementById('resultGrid');
             if (queue.length === 0) return;
             grid.innerHTML = queue.map((item, index) => `
-                <div class="relative bg-white rounded-[2rem] border border-slate-50 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-500">
+                <div class="relative bg-white rounded-[2rem] border border-slate-50 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-500 card-hover">
                     <img src="${item.resultUrl || URL.createObjectURL(item.file)}" class="w-full aspect-square object-cover ${item.status === 'processing' ? 'scale-110 blur-sm opacity-50' : ''} transition-all duration-700">
                     
                     ${item.status === 'processing' ? `
                         <div class="absolute inset-0 flex flex-col items-center justify-center p-4">
                             <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white flex flex-col items-center">
                                 <i class="fa fa-spinner fa-spin text-primary text-xl mb-2"></i>
-                                <span class="text-[9px] font-black text-slate-500 uppercase">${item.log}</span>
+                                <span class="text-[9px] font-black text-slate-500 uppercase tracking-tighter">${item.log}</span>
                             </div>
                         </div>
                     ` : ''}
 
                     ${item.status === 'success' ? `
                         <div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                            <a href="${item.resultUrl}" download="result_${item.file.name}" class="bg-white w-12 h-12 rounded-full flex items-center justify-center text-primary shadow-2xl hover:scale-125 transition-transform">
-                                <i class="fa fa-download text-lg"></i>
+                            <a href="${item.resultUrl}" download="smart_${item.file.name}" class="bg-white w-12 h-12 rounded-full flex items-center justify-center text-primary shadow-2xl hover:scale-125 transition-transform">
+                                <i class="fa fa-download"></i>
                             </a>
                         </div>
                     ` : ''}
 
                     ${item.status === 'error' ? `
-                        <div class="absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center p-4">
-                            <span class="text-red-500 text-[10px] font-bold uppercase tracking-tighter">Engine Failure</span>
+                        <div class="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center p-4 text-center">
+                            <i class="fa fa-exclamation-triangle text-red-500 mb-2"></i>
+                            <!-- 核心修复：这里不再写死 Engine Failure，而是动态显示 item.log -->
+                            <span class="text-red-600 text-[10px] font-black uppercase tracking-tighter leading-tight">${item.log}</span>
                         </div>
                     ` : ''}
                 </div>
@@ -314,7 +184,6 @@
         async function startBatchProcess() {
             if (isProcessing || queue.length === 0) return;
             
-            // 获取输入值，如果为空则取默认解密值
             const rawApiKey = document.getElementById('apiKey').value.trim();
             const rawProxy = document.getElementById('geminiProxy').value.trim();
             const rawBackend = document.getElementById('hfBackend').value.trim();
@@ -324,7 +193,7 @@
             const hfUrl = rawBackend !== "" ? rawBackend : atob(_O_B);
             const selectedModel = document.getElementById('modelSelect').value;
 
-            if (!apiKey) return alert("请先输入您的 Gemini API Key！");
+            if (!apiKey) return alert("错误：请填写 API Key！");
 
             isProcessing = true;
             document.getElementById('progressArea').classList.remove('hidden');
@@ -338,39 +207,34 @@
                 updateProgress(i, queue.length);
 
                 try {
-                    // --- 阶段 1: Gemini 大脑分析 ---
                     const base64 = await toBase64(queue[i].file);
                     const cleanProxy = geminiUrl.replace(/\/$/, "");
+                    
+                    // 1. 大脑分析 (Gemini)
                     const geminiRes = await fetch(`${cleanProxy}/models/${selectedModel}:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{
                                 parts: [
-                                    { text: "分析此图。为了抠图加阴影，请返回阴影参数：offset_x, offset_y, blur, opacity。请只返回纯 JSON，严禁包含Markdown标签，示例: {\"offset_x\": 10, \"offset_y\": 10, \"blur\": 8, \"opacity\": 0.4}" },
+                                    { text: "分析此图。为了抠图加阴影，请返回阴影参数。只返回纯 JSON: {\"offset_x\": 10, \"offset_y\": 10, \"blur\": 10, \"opacity\": 0.4}" },
                                     { inline_data: { mime_type: queue[i].file.type, data: base64.split(',')[1] } }
                                 ]
                             }]
                         })
                     });
 
-                    if (!geminiRes.ok) throw new Error(`Gemini 联络失败(状态码:${geminiRes.status})`);
-                    
+                    if (!geminiRes.ok) throw new Error(`Gemini报错 ${geminiRes.status}`);
                     const geminiData = await geminiRes.json();
                     
-                    // 检查 Gemini 是否正常返回内容
-                    if (!geminiData.candidates || geminiData.candidates.length === 0) {
-                        throw new Error("Gemini 拒绝分析或 Key 已过期");
-                    }
+                    if (!geminiData.candidates) throw new Error("API Key无效或触发安全过滤");
                     
                     let rawText = geminiData.candidates[0].content.parts[0].text;
-                    
-                    // 增强型 JSON 提取：兼容更多复杂的返回格式
-                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                    if (!jsonMatch) throw new Error("Gemini 返回格式非 JSON");
+                    const jsonMatch = rawText.match(/\{.*\}/s);
+                    if (!jsonMatch) throw new Error("AI未返回有效参数");
                     const shadowParams = jsonMatch[0]; 
 
-                    // --- 阶段 2: Hugging Face 后端执行 ---
+                    // 2. 双手执行 (Hugging Face)
                     queue[i].log = '算法执行中...';
                     renderGrid();
 
@@ -379,32 +243,26 @@
                     fd.append('shadow_params', shadowParams);
 
                     const cleanHf = hfUrl.replace(/\/$/, "");
-                    // 注意：这里确保指向 process_smart 接口
                     const hfRes = await fetch(`${cleanHf}/process_smart`, { method: 'POST', body: fd });
                     
-                    if (!hfRes.ok) {
-                        if (hfRes.status === 404) throw new Error("后端接口路径错误(404)");
-                        throw new Error(`后端故障(状态码:${hfRes.status})`);
-                    }
+                    if (!hfRes.ok) throw new Error(`后端报错 ${hfRes.status}`);
                     
                     const blob = await hfRes.blob();
                     queue[i].resultUrl = URL.createObjectURL(blob);
                     queue[i].status = 'success';
 
                 } catch (error) {
-                    console.error("详细错误:", error);
+                    console.error("DEBUG:", error);
                     queue[i].status = 'error';
-                    // 将具体错误原因写在 log 中显示在界面
-                    queue[i].log = error.message; 
+                    queue[i].log = error.message; // 记录真实原因
                 }
 
                 renderGrid();
                 updateProgress(i + 1, queue.length);
             }
             isProcessing = false;
-            document.getElementById('progressText').innerText = "全部任务已完成";         
         }
-        // 工具函数
+
         function toBase64(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -418,31 +276,6 @@
             document.getElementById('progressBar').style.width = percent + '%';
             document.getElementById('percentText').innerText = percent + '%';
         }
-
-        // 初始化图表
-        const ctx = document.getElementById('performanceChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['传统手动', '普通 AI', 'Gemini Smart Editor'],
-                datasets: [{
-                    label: '处理 10 张图平均耗时 (秒)',
-                    data: [1200, 60, 15],
-                    backgroundColor: ['#f87171', '#fbbf24', '#3b82f6'],
-                    borderRadius: 10
-                }]
-            },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
-
-        // 滚动动画观察器
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) entry.target.classList.add('animate-slide-up');
-            });
-        }, { threshold: 0.1 });
-
-        document.querySelectorAll('.card-hover').forEach(card => observer.observe(card));
     </script>
 </body>
 </html>
